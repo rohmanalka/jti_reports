@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'pages/login_page.dart';
+import 'pages/home_page.dart';
 import 'pages/riwayat_page.dart';
 
 void main() {
@@ -35,7 +36,7 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 1;
   final List<Widget> _pages = [
     RiwayatPage(),
-    Container(color: Colors.white), // Beranda Tengah Ges
+    HomePage(), // Beranda Tengah Ges
     Container(color: Colors.white), // Laporan Misal
   ];
 
