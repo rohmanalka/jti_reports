@@ -47,7 +47,7 @@ class _MainPageState extends State<MainPage> {
       body: _pages[_selectedIndex],
       bottomNavigationBar: CurvedNavigationBar(
         backgroundColor: Colors.transparent,
-        color: Colors.blueAccent,
+        color: Colors.deepPurple,
         height: 60,
         index: _selectedIndex,
         animationDuration: const Duration(milliseconds: 300),
