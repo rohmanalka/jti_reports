@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:jti_reports/pages/email_verification_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -47,7 +50,6 @@ class _RegisterPageState extends State<RegisterPage>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    // Start animation after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.forward();
     });
@@ -63,74 +65,94 @@ class _RegisterPageState extends State<RegisterPage>
     super.dispose();
   }
 
-  void _simulateRegister() async {
-    if (_fullNameController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty ||
-        !_agreeToTerms) {
+  void _registerWithFirebase() async {
+    final name = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirm = _confirmPasswordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty || confirm.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Please fill all fields and agree to terms'),
-            ],
-          ),
+        const SnackBar(
+          content: Text("Semua kolom harus diisi"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
         ),
       );
       return;
     }
 
-    if (_passwordController.text != _confirmPasswordController.text) {
+    if (password != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Passwords do not match'),
-            ],
-          ),
+        const SnackBar(
+          content: Text("Password tidak sama"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
         ),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Registration Successful!'),
-          ],
+    if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Anda harus menyetujui syarat & ketentuan"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
         ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+      return;
+    }
 
-    // Navigate back to login after success
-    await Future.delayed(const Duration(seconds: 1));
-    Navigator.pop(context);
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      final user = userCredential.user;
+
+      await user!.sendEmailVerification();
+
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+        "name": name,
+        "email": email,
+        "role": "mahasiswa",
+        "emailVerified": false,
+        "createdAt": Timestamp.now(),
+      });
+
+      setState(() => _isLoading = false);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Registrasi berhasil! Cek email untuk verifikasi."),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const EmailVerificationPage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? "Registrasi gagal"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
+    }
   }
 
   void _togglePasswordVisibility() {
@@ -237,79 +259,86 @@ class _RegisterPageState extends State<RegisterPage>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 20),
-
-                  // Back Button
-                  SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          icon: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
+                  const SizedBox(height: 40),
+                  Stack(
+                    children: [
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: IconButton(
+                              icon: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              size: 20,
-                              color: Colors.deepPurple,
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 20,
+                                  color: Colors.deepPurple,
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
                             ),
                           ),
-                          onPressed: () => Navigator.pop(context),
                         ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 20),
-
-                  // Animated Logo with gradient
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.deepPurple, Colors.purpleAccent],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.deepPurple.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: ScaleTransition(
+                              scale: _scaleAnimation,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Colors.deepPurple,
+                                      Colors.purpleAccent,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(25),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.deepPurple.withOpacity(0.3),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.person_add_outlined,
+                                  size: 40,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.person_add_outlined,
-                          size: 40,
-                          color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 40),
 
-                  const SizedBox(height: 30),
-
-                  // Welcome text with slide animation
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
@@ -319,13 +348,12 @@ class _RegisterPageState extends State<RegisterPage>
                           Text(
                             'Create Account',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey[800],
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 8),
                           Text(
                             'Fill your details to create account',
                             style: TextStyle(
@@ -338,29 +366,23 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 30),
-
-                  // Full Name Field
                   _buildTextField(
                     controller: _fullNameController,
                     hintText: 'Full Name',
                     icon: Icons.person_outline,
                   ),
+                  const SizedBox(height: 15),
 
-                  const SizedBox(height: 16),
-
-                  // Email Field
                   _buildTextField(
                     controller: _emailController,
                     hintText: 'Email Address',
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                   ),
+                  const SizedBox(height: 15),
 
-                  const SizedBox(height: 16),
-
-                  // Password Field
                   _buildTextField(
                     controller: _passwordController,
                     hintText: 'Password',
@@ -369,10 +391,8 @@ class _RegisterPageState extends State<RegisterPage>
                     isVisible: _isPasswordVisible,
                     onToggleVisibility: _togglePasswordVisibility,
                   ),
+                  const SizedBox(height: 15),
 
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
                   _buildTextField(
                     controller: _confirmPasswordController,
                     hintText: 'Confirm Password',
@@ -381,10 +401,8 @@ class _RegisterPageState extends State<RegisterPage>
                     isVisible: _isConfirmPasswordVisible,
                     onToggleVisibility: _toggleConfirmPasswordVisibility,
                   ),
+                  const SizedBox(height: 15),
 
-                  const SizedBox(height: 20),
-
-                  // Terms and Conditions
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
@@ -395,8 +413,8 @@ class _RegisterPageState extends State<RegisterPage>
                           GestureDetector(
                             onTap: _toggleTermsAgreement,
                             child: Container(
-                              width: 24,
-                              height: 24,
+                              width: 20,
+                              height: 20,
                               decoration: BoxDecoration(
                                 color: _agreeToTerms
                                     ? Colors.deepPurple
@@ -412,7 +430,7 @@ class _RegisterPageState extends State<RegisterPage>
                               child: _agreeToTerms
                                   ? Icon(
                                       Icons.check,
-                                      size: 16,
+                                      size: 14,
                                       color: Colors.white,
                                     )
                                   : null,
@@ -464,19 +482,17 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                   ),
+                  const SizedBox(height: 15),
 
-                  const SizedBox(height: 30),
-
-                  // Register Button
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
                       child: SizedBox(
                         width: double.infinity,
-                        height: 56,
+                        height: 50,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _simulateRegister,
+                          onPressed: _isLoading ? null : _registerWithFirebase,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
@@ -500,7 +516,7 @@ class _RegisterPageState extends State<RegisterPage>
                               : Text(
                                   'Create Account',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -509,9 +525,8 @@ class _RegisterPageState extends State<RegisterPage>
                     ),
                   ),
 
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 40),
 
-                  // Divider
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
@@ -534,10 +549,8 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 25),
-
-                  // Social Login Buttons
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
@@ -545,7 +558,6 @@ class _RegisterPageState extends State<RegisterPage>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Google dengan gambar
                           _SocialLoginButton(
                             imagePath: 'lib/images/google.png',
                             onTap: () {},
@@ -554,10 +566,8 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 25),
-
-                  // Already have account
                   SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
