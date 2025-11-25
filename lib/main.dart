@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:jti_reports/pages/tambah_laporan_page.dart';
 
 // Import semua halaman
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/riwayat_page.dart';
-import 'pages/onboarding_page.dart';
-import 'pages/tambahlaporan_page.dart'; 
+import 'pages/onboarding3_page.dart';
+import 'pages/tambah_laporan_page.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

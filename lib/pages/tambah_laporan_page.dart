@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pilih_lokasi_page.dart'; // Pastikan file ini ada di folder pages
+import 'lokasi_page.dart'; // Pastikan file ini ada di folder pages
 
 class TambahlaporanPage extends StatefulWidget {
   const TambahlaporanPage({super.key});
@@ -87,7 +87,7 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
   void _openLocationPicker() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const PilihLokasiPage()),
+      MaterialPageRoute(builder: (context) => const LokasiPage()),
     );
 
     if (result != null && result is LokasiData) {

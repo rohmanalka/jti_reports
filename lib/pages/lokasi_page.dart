@@ -15,14 +15,14 @@ class LokasiData {
   });
 }
 
-class PilihLokasiPage extends StatefulWidget {
-  const PilihLokasiPage({super.key});
+class LokasiPage extends StatefulWidget {
+  const LokasiPage({super.key});
 
   @override
-  State<PilihLokasiPage> createState() => _PilihLokasiPageState();
+  State<LokasiPage> createState() => _PilihLokasiPageState();
 }
 
-class _PilihLokasiPageState extends State<PilihLokasiPage> {
+class _PilihLokasiPageState extends State<LokasiPage> {
   final TextEditingController _patokanController = TextEditingController();
 
   // Variable state untuk simulasi
