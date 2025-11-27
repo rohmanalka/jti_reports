@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/appbar/main_app_bar.dart';
+import '../../../core/widgets/drawer/main_drawer.dart';
 import 'detail_laporan_page.dart';
 
 class RiwayatPage extends StatelessWidget {
@@ -7,19 +9,8 @@ class RiwayatPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Riwayat Pelaporan',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.deepPurple,
-        elevation: 4,
-      ),
-
+      drawer: const MainDrawer(),
+      appBar: const MainAppBar(title: 'Riwayat'),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(
@@ -98,10 +89,7 @@ class RiwayatPage extends StatelessWidget {
           backgroundColor: statusColor.withOpacity(0.2),
           child: Icon(icon, color: statusColor, size: 28),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(date),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -111,10 +99,7 @@ class RiwayatPage extends StatelessWidget {
           ),
           child: Text(
             status,
-            style: TextStyle(
-              color: statusColor,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
           ),
         ),
       ),

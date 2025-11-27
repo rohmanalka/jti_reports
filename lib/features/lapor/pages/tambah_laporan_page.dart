@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/appbar/main_app_bar.dart';
+import '../../../core/widgets/drawer/main_drawer.dart';
 import 'lokasi_page.dart'; // Pastikan file ini ada di folder pages
 
 class TambahlaporanPage extends StatefulWidget {
@@ -10,18 +12,25 @@ class TambahlaporanPage extends StatefulWidget {
 
 class _TambahlaporanPageState extends State<TambahlaporanPage> {
   // Controllers
-  final TextEditingController _jenisKerusakanController = TextEditingController();
+  final TextEditingController _jenisKerusakanController =
+      TextEditingController();
   final TextEditingController _deskripsiController = TextEditingController();
-  final TextEditingController _lokasiDisplayController = TextEditingController(); // Hanya untuk menampilkan teks lokasi
+  final TextEditingController _lokasiDisplayController =
+      TextEditingController(); // Hanya untuk menampilkan teks lokasi
 
   LokasiData? _selectedLocation;
   String? _selectedSeverity;
-  
+
   // List Dummy Media (String path gambar asset/dummy)
   // Kita pakai list string untuk simulasi, nanti diganti XFile dari image_picker
-  List<String> _dummyMedia = []; 
+  List<String> _dummyMedia = [];
 
-  final List<String> _severityOptions = ['Rendah', 'Sedang', 'Tinggi', 'Bahaya'];
+  final List<String> _severityOptions = [
+    'Rendah',
+    'Sedang',
+    'Tinggi',
+    'Bahaya',
+  ];
 
   @override
   void dispose() {
@@ -60,7 +69,14 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Tambah Foto/Video (Simulasi)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.deepPurple)),
+            const Text(
+              "Tambah Foto/Video (Simulasi)",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.deepPurple,
+              ),
+            ),
             const SizedBox(height: 20),
             ListTile(
               leading: const Icon(Icons.camera_alt, color: Colors.deepPurple),
@@ -94,7 +110,8 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
       setState(() {
         _selectedLocation = result;
         // Update text field agar user melihat lokasi yang dipilih
-        _lokasiDisplayController.text = "${result.namaLokasi} (${result.patokan})";
+        _lokasiDisplayController.text =
+            "${result.namaLokasi} (${result.patokan})";
       });
     }
   }
@@ -102,20 +119,10 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Background putih bersih seperti di gambar
-      appBar: AppBar(
-        title: const Text(
-          'Pengajuan Laporan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.deepPurple,
-        centerTitle: true,
-        elevation: 0,
-        automaticallyImplyLeading: false, // Hilangkan tombol back default karena di tab utama
-      ),
-      // Tambahkan padding bawah agar tidak tertutup navbar
+      drawer: const MainDrawer(),
+      appBar: const MainAppBar(title: 'Lapor Fasilitas'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), 
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -143,7 +150,8 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
             _buildLabel("Lokasi Fasilitas"),
             GestureDetector(
               onTap: _openLocationPicker,
-              child: AbsorbPointer( // Mencegah keyboard muncul
+              child: AbsorbPointer(
+                // Mencegah keyboard muncul
                 child: _buildTextField(
                   controller: _lokasiDisplayController,
                   hint: "Pilih lokasi fasilitas...",
@@ -178,16 +186,29 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                   value: _selectedSeverity,
                   hint: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.deepPurple, size: 22),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.deepPurple,
+                        size: 22,
+                      ),
                       const SizedBox(width: 12),
-                      Text("Pilih tingkat keparahan", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                      Text(
+                        "Pilih tingkat keparahan",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
                     ],
                   ),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.deepPurple),
+                  icon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.deepPurple,
+                  ),
                   items: _severityOptions.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
-                      child: Text(value, style: const TextStyle(color: Colors.deepPurple)),
+                      child: Text(
+                        value,
+                        style: const TextStyle(color: Colors.deepPurple),
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) => setState(() => _selectedSeverity = val),
@@ -214,11 +235,18 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                       child: Column(
                         children: [
                           const SizedBox(height: 10),
-                          Icon(Icons.camera_alt_outlined, size: 50, color: Colors.deepPurple.shade300),
+                          Icon(
+                            Icons.camera_alt_outlined,
+                            size: 50,
+                            color: Colors.deepPurple.shade300,
+                          ),
                           const SizedBox(height: 10),
                           const Text(
                             "Unggah atau Pilih Foto Kerusakan",
-                            style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -230,7 +258,9 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                       spacing: 10,
                       runSpacing: 10,
                       children: [
-                        ..._dummyMedia.map((media) => _buildMediaThumbnail(media)),
+                        ..._dummyMedia.map(
+                          (media) => _buildMediaThumbnail(media),
+                        ),
                         // Tombol Tambah Lagi
                         if (_dummyMedia.length < 3)
                           GestureDetector(
@@ -241,14 +271,19 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.deepPurple.shade200),
+                                border: Border.all(
+                                  color: Colors.deepPurple.shade200,
+                                ),
                               ),
-                              child: const Icon(Icons.add, color: Colors.deepPurple),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.deepPurple,
+                              ),
                             ),
                           ),
                       ],
                     ),
-                  ]
+                  ],
                 ],
               ),
             ),
@@ -261,7 +296,9 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
               child: ElevatedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Laporan berhasil dikirim (Simulasi)")),
+                    const SnackBar(
+                      content: Text("Laporan berhasil dikirim (Simulasi)"),
+                    ),
                   );
                   // Reset form dummy
                   setState(() {
@@ -282,7 +319,11 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                 ),
                 child: const Text(
                   "Kirim Laporan",
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -327,7 +368,10 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
           hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
           prefixIcon: Icon(icon, color: Colors.deepPurple, size: 22),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 15,
+            horizontal: 10,
+          ),
         ),
       ),
     );
@@ -363,7 +407,10 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
             },
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.close, size: 14, color: Colors.white),
             ),
           ),
