@@ -26,7 +26,7 @@ String formatTimestamp(dynamic timestamp) {
 
 void navigateToDetailLaporan(BuildContext context, QueryDocumentSnapshot doc) {
   final data = (doc.data() as Map<String, dynamic>?) ?? {};
-  final judul = data['jenis_kerusakan']?.toString() ?? 'Laporan';
+  final judul = data['jenis_kerusakan']?.toString() ?? 'Laporan tidak tersedia';
   final tanggal = formatTimestamp(data['timestamp']);
   final status = data['status']?.toString() ?? 'Diajukan';
   final warna = status.toLowerCase() == 'selesai'
@@ -35,6 +35,7 @@ void navigateToDetailLaporan(BuildContext context, QueryDocumentSnapshot doc) {
           ? Colors.orange
           : Colors.redAccent;
   final deskripsi = data['deskripsi']?.toString() ?? 'Deskripsi tidak tersedia';
+  final keparahan = data['tingkat_keparahan'].toString();
   final Map<String, dynamic>? lokasi = (data['lokasi'] is Map)
       ? Map<String, dynamic>.from(data['lokasi'])
       : null;
@@ -52,8 +53,10 @@ void navigateToDetailLaporan(BuildContext context, QueryDocumentSnapshot doc) {
         status: status,
         statusColor: warna,
         deskripsi: deskripsi,
+        keparahan: keparahan,
         lokasi: lokasi,
         mediaPaths: mediaPaths,
+        docId: doc.id,
       ),
     ),
   );
