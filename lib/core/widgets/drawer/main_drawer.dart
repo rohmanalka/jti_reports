@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -21,9 +22,23 @@ class MainDrawer extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () async {
-                  Navigator.of(context).pop(); // Tutup dialog
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacementNamed(context, '/login');
+                  try {
+                    final googleSignIn = GoogleSignIn();
+                    if (await googleSignIn.isSignedIn()) {
+                      await googleSignIn.signOut();
+                    }
+
+                    await FirebaseAuth.instance.signOut();
+
+                    Navigator.pushReplacementNamed(context, '/login');
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error logout: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
                 child: const Text(
                   'Logout',
@@ -69,12 +84,16 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text("Profil"),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/profile');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text("Pengaturan"),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/settings');
+            },
           ),
           const Divider(),
           ListTile(
