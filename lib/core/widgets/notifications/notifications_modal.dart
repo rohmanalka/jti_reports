@@ -28,12 +28,12 @@ class NotificationModal {
                   ),
                 ),
                 const SizedBox(height: 15),
-                const Text(
+                Text(
                   "Notifikasi",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
+                    color: Colors.blue[800],
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -44,10 +44,10 @@ class NotificationModal {
                     itemBuilder: (context, index) {
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.deepPurple.shade100,
-                          child: const Icon(
+                          backgroundColor: Colors.indigo[50],
+                          child: Icon(
                             Icons.notifications,
-                            color: Colors.deepPurple,
+                            color: Colors.blue[800],
                           ),
                         ),
                         title: const Text("Laporan Anda diperbarui"),
