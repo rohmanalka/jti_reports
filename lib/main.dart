@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 // Import halaman auth
 import 'package:jti_reports/features/auth/pages/login_page.dart';
@@ -20,10 +21,14 @@ import 'package:jti_reports/features/settings/pages/settings_page.dart';
 import 'features/riwayat/pages/riwayat_page.dart';
 import 'features/lapor/pages/tambah_laporan_page.dart';
 
+
+const supabaseUrl = 'https://qhugkqivkewxvucylozc.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodWdrcWl2a2V3eHZ1Y3lsb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMjA0NzgsImV4cCI6MjA4MDU5NjQ3OH0.PtOd-TDpiShoUU7TKXeEwQI0j4NNtyEAzFINAxcUExk';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   initializeDateFormatting('id_ID', null).then((_) {});
   await Firebase.initializeApp();
+  await supabase.Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   runApp(const MyApp());
 }
 
