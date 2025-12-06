@@ -21,9 +21,9 @@ import 'package:jti_reports/features/settings/pages/settings_page.dart';
 import 'features/riwayat/pages/riwayat_page.dart';
 import 'features/lapor/pages/tambah_laporan_page.dart';
 
-
 const supabaseUrl = 'https://qhugkqivkewxvucylozc.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodWdrcWl2a2V3eHZ1Y3lsb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMjA0NzgsImV4cCI6MjA4MDU5NjQ3OH0.PtOd-TDpiShoUU7TKXeEwQI0j4NNtyEAzFINAxcUExk';
+const supabaseKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodWdrcWl2a2V3eHZ1Y3lsb3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMjA0NzgsImV4cCI6MjA4MDU5NjQ3OH0.PtOd-TDpiShoUU7TKXeEwQI0j4NNtyEAzFINAxcUExk';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   initializeDateFormatting('id_ID', null).then((_) {});
@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthWrapper(), // Gunakan AuthWrapper untuk handle auth state
+      home: const AuthWrapper(),
       routes: {
         '/onboarding': (context) => const OnboardingPage(),
         '/login': (context) => const LoginPage(),
