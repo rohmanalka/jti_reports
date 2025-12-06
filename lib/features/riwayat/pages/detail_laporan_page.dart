@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jti_reports/features/riwayat/pages/media_viewer.dart';
 import 'package:jti_reports/features/lapor/pages/update_laporan_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetailLaporanPage extends StatelessWidget {
   final String title;
@@ -11,7 +12,7 @@ class DetailLaporanPage extends StatelessWidget {
   final Color statusColor;
   final String deskripsi;
   final String keparahan;
-  final Map<String, dynamic>? lokasi;
+  final String lokasi;
   final List<String>? mediaPaths;
   final String? docId;
 
@@ -23,26 +24,13 @@ class DetailLaporanPage extends StatelessWidget {
     required this.statusColor,
     required this.deskripsi,
     required this.keparahan,
-    this.lokasi,
+    required this.lokasi,
     this.mediaPaths,
     this.docId,
   });
 
   @override
   Widget build(BuildContext context) {
-    final lokasiText = lokasi != null
-        ? (lokasi!['patokan'] ??
-              lokasi!['nama_lokasi'] ??
-              'Lokasi tidak tersedia')
-        : 'Lokasi tidak tersedia';
-
-    final lat = lokasi != null
-        ? (lokasi!['latitude'] as num?)?.toDouble()
-        : null;
-    final lon = lokasi != null
-        ? (lokasi!['longitude'] as num?)?.toDouble()
-        : null;
-
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
@@ -172,10 +160,7 @@ class DetailLaporanPage extends StatelessWidget {
           _buildInfo("Status", status, color: statusColor),
           _buildInfo("Deskripsi", deskripsi),
           _buildInfo("Tingkat Keparahan", keparahan),
-          _buildInfo("Lokasi", lokasiText),
-          if (lat != null && lon != null)
-            _buildInfo("Koordinat", "Lat: $lat, Lon: $lon"),
-
+          _buildInfo("Lokasi", lokasi),
           const SizedBox(height: 20),
 
           Row(
@@ -310,6 +295,28 @@ class DetailLaporanPage extends StatelessWidget {
   Future<void> _deleteReport(BuildContext context) async {
     if (docId == null) return;
     try {
+      // Hapus media dari Supabase (jika ada)
+      if (mediaPaths != null && mediaPaths!.isNotEmpty) {
+        const bucket = 'laporan-media';
+        for (final url in mediaPaths!) {
+          if (url.startsWith('http')) {
+            try {
+              final uri = Uri.parse(url);
+              final segments = uri.pathSegments;
+              final publicIdx = segments.indexOf('public');
+              if (publicIdx >= 0 && publicIdx + 2 < segments.length) {
+                final filePath = segments.skip(publicIdx + 2).join('/');
+                await Supabase.instance.client.storage.from(bucket).remove([filePath]);
+              } else {
+                print('Could not extract storage path from url: $url');
+              }
+            } catch (e) {
+              // log and continue deleting other files
+              print('Gagal menghapus media dari Supabase: $e');
+            }
+          }
+        }
+      }
       await FirebaseFirestore.instance
           .collection('reports')
           .doc(docId)

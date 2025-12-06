@@ -36,9 +36,7 @@ void navigateToDetailLaporan(BuildContext context, QueryDocumentSnapshot doc) {
           : Colors.redAccent;
   final deskripsi = data['deskripsi']?.toString() ?? 'Deskripsi tidak tersedia';
   final keparahan = data['tingkat_keparahan'].toString();
-  final Map<String, dynamic>? lokasi = (data['lokasi'] is Map)
-      ? Map<String, dynamic>.from(data['lokasi'])
-      : null;
+  final String lokasi = data['lokasi']?.toString() ?? 'Lokasi tidak tersedia';
   final mediaPaths = (data['media_paths'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList() ??

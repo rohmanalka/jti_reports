@@ -4,13 +4,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'lokasi_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UpdateLaporanPage extends StatefulWidget {
   final String docId;
   final String initialJenis;
   final String initialDeskripsi;
-  final Map<String, dynamic>? initialLokasi;
+  final String initialLokasi;
   final String? initialSeverity;
   final List<String>? initialMediaPaths;
 
@@ -19,7 +19,7 @@ class UpdateLaporanPage extends StatefulWidget {
     required this.docId,
     required this.initialJenis,
     required this.initialDeskripsi,
-    this.initialLokasi,
+    required this.initialLokasi,
     this.initialSeverity,
     this.initialMediaPaths,
   }) : super(key: key);
@@ -31,14 +31,14 @@ class UpdateLaporanPage extends StatefulWidget {
 class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
   final TextEditingController _jenisController = TextEditingController();
   final TextEditingController _deskripsiController = TextEditingController();
-  final TextEditingController _lokasiDisplayController = TextEditingController();
+  final TextEditingController _lokasiController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final int _maxMedia = 3;
 
-  Map<String, dynamic>? _lokasi;
   String? _selectedSeverity;
   // path media yang sudah tersimpan
   List<String> _existingMedia = [];
+  late final List<String> _initialMedia;
   // path media baru yang dipilih
   List<XFile> _newMedia = [];
 
@@ -47,19 +47,17 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
     super.initState();
     _jenisController.text = widget.initialJenis;
     _deskripsiController.text = widget.initialDeskripsi;
-    _lokasi = widget.initialLokasi != null ? Map<String, dynamic>.from(widget.initialLokasi!) : null;
+    _lokasiController.text = widget.initialLokasi;
     _selectedSeverity = widget.initialSeverity;
     _existingMedia = widget.initialMediaPaths != null ? List<String>.from(widget.initialMediaPaths!) : [];
-    _lokasiDisplayController.text = _lokasi != null
-        ? (_lokasi!['patokan'] ?? _lokasi!['nama_lokasi'] ?? '')
-        : '';
+    _initialMedia = List<String>.from(_existingMedia);
   }
 
   @override
   void dispose() {
     _jenisController.dispose();
     _deskripsiController.dispose();
-    _lokasiDisplayController.dispose();
+    _lokasiController.dispose();
     super.dispose();
   }
 
@@ -127,24 +125,6 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
     );
   }
 
-  void _openLocationPicker() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LokasiPage()),
-    );
-    if (result != null && result is LokasiData) {
-      setState(() {
-        _lokasi = {
-          'nama_lokasi': result.namaLokasi,
-          'patokan': result.patokan,
-          'latitude': result.latitude,
-          'longitude': result.longitude,
-        };
-        _lokasiDisplayController.text = "${result.namaLokasi} (${result.patokan})";
-      });
-    }
-  }
-
   Widget _buildMediaThumbnailFromPath(String path, int idx) {
     final lower = path.toLowerCase();
     final isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.avi') || lower.endsWith('.mkv');
@@ -172,9 +152,9 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
           height: 80,
           margin: const EdgeInsets.only(right: 8),
           decoration: BoxDecoration(
-            color: Colors.deepPurple.shade50,
+            color: Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.deepPurple.shade100),
+            border: Border.all(color: Colors.grey),
           ),
           child: ClipRRect(borderRadius: BorderRadius.circular(10), child: thumb),
         ),
@@ -182,10 +162,16 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
           right: 0,
           top: 0,
           child: GestureDetector(
-            onTap: () {
+            onTap: () async {
+              final removedPath = _existingMedia[idx];
+              // optimis: remove immediately for UI responsiveness
               setState(() {
                 _existingMedia.removeAt(idx);
               });
+              // if the removed item is a Supabase URL, try deleting from storage
+              if (removedPath.startsWith('http')) {
+                await _deleteMediaFromSupabase(removedPath);
+              }
             },
             child: Container(
               decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
@@ -209,9 +195,9 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
           height: 80,
           margin: const EdgeInsets.only(right: 8),
           decoration: BoxDecoration(
-            color: Colors.deepPurple.shade50,
+            color: Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.deepPurple.shade100),
+            border: Border.all(color: Colors.grey),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -240,27 +226,49 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
 
   Future<void> _submitUpdate() async {
     try {
-      // copy new media to aplikasi local
-      final appDir = await getApplicationDocumentsDirectory();
-      final mediaDir = Directory(p.join(appDir.path, 'laporan_media'));
-      if (!await mediaDir.exists()) await mediaDir.create(recursive: true);
+      final supabaseClient = Supabase.instance.client;
+      const String bucket = 'laporan-media';
 
-      final List<String> finalMediaPaths = List<String>.from(_existingMedia);
+      final removedFromInitial = _initialMedia.where((p) => !_existingMedia.contains(p)).toList();
+      for (final removed in removedFromInitial) {
+        if (removed.startsWith('http')) {
+          try {
+            await _deleteMediaFromSupabase(removed);
+          } catch (_) {
+            // ignore individual delete errors; proceed with update
+          }
+        }
+      }
+      
+      List<String> finalMediaUrls = [];
+
+      finalMediaUrls.addAll(_existingMedia);
+
       for (var media in _newMedia) {
-        final src = File(media.path);
-        final filename = '${DateTime.now().millisecondsSinceEpoch}_${media.name}';
-        final dest = p.join(mediaDir.path, filename);
-        final copied = await src.copy(dest);
-        finalMediaPaths.add(copied.path);
+        try {
+          final bytes = await File(media.path).readAsBytes();
+          final filename = '${DateTime.now().millisecondsSinceEpoch}_${p.basename(media.path)}';
+          final storagePath = 'reports/$filename';
+
+          await supabaseClient.storage.from(bucket).uploadBinary(storagePath, bytes);
+
+          final publicUrl = supabaseClient.storage.from(bucket).getPublicUrl(storagePath);
+          finalMediaUrls.add(publicUrl);
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal upload media: $e')),
+          );
+          return;
+        }
       }
 
       // update Firestore doc
       await FirebaseFirestore.instance.collection('reports').doc(widget.docId).update({
         'jenis_kerusakan': _jenisController.text,
         'deskripsi': _deskripsiController.text,
-        'lokasi': _lokasi,
+        'lokasi': _lokasiController.text,
         'tingkat_keparahan': _selectedSeverity,
-        'media_paths': finalMediaPaths,
+        'media_paths': finalMediaUrls,
         'status': 'Diajukan',
         'updated_at': FieldValue.serverTimestamp(),
       });
@@ -269,6 +277,23 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
       Navigator.of(context).pop(true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memperbarui laporan: $e')));
+    }
+  }
+
+  Future<void> _deleteMediaFromSupabase(String publicUrl) async {
+    try {
+      const String bucket = 'laporan-media';
+      final uri = Uri.parse(publicUrl);
+      final pathSegments = uri.pathSegments;
+      final publicIdx = pathSegments.indexOf('public');
+      if (publicIdx >= 0 && publicIdx + 2 < pathSegments.length) {
+        final filePath = pathSegments.skip(publicIdx + 2).join('/');
+        await Supabase.instance.client.storage.from(bucket).remove([filePath]);
+      } else {
+        print('Could not extract storage path from url: $publicUrl');
+      }
+    } catch (e) {
+      print('Gagal menghapus media dari Supabase: $e');
     }
   }
 
@@ -286,13 +311,14 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.blue[800],
         centerTitle: true,
       ),
+      backgroundColor: Colors.indigo[50],
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Detail Laporan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+          Text('Detail Laporan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue[800])),
           const SizedBox(height: 20),
 
           _buildLabel('Jenis Kerusakan'),
@@ -300,12 +326,7 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
 
           const SizedBox(height: 15),
           _buildLabel('Lokasi Fasilitas'),
-          GestureDetector(
-            onTap: _openLocationPicker,
-            child: AbsorbPointer(
-              child: _buildTextField(controller: _lokasiDisplayController, hint: 'Pilih lokasi fasilitas...', icon: Icons.location_on, isLocation: true),
-            ),
-          ),
+          _buildTextField(controller: _lokasiController, hint: 'Contoh: LPR1-LT7B', icon: Icons.location_on, isLocation: true),
 
           const SizedBox(height: 15),
           _buildLabel('Deskripsi Kerusakan'),
@@ -315,14 +336,14 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
           _buildLabel('Tingkat Keparahan'),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: _selectedSeverity,
-                hint: Row(children: [Icon(Icons.warning_amber_rounded, color: Colors.deepPurple, size: 22), const SizedBox(width: 12), Text('Pilih tingkat keparahan', style: TextStyle(color: Colors.grey[600], fontSize: 14))]),
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.deepPurple),
-                items: severityOptions.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(color: Colors.deepPurple)))).toList(),
+                hint: Row(children: [Icon(Icons.warning_amber_rounded, color: Colors.blue[800], size: 22), const SizedBox(width: 12), Text('Pilih tingkat keparahan', style: TextStyle(color: Colors.grey[600], fontSize: 14))]),
+                icon: Icon(Icons.arrow_drop_down, color: Colors.blue[800]),
+                items: severityOptions.map((s) => DropdownMenuItem(value: s, child: Text(s, style: TextStyle(color: Colors.blue[800])))).toList(),
                 onChanged: (val) => setState(() => _selectedSeverity = val),
               ),
             ),
@@ -334,9 +355,9 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.shade50,
+              color: Colors.grey[100],
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.deepPurple.shade100),
+              border: Border.all(color: Colors.grey),
             ),
             child: Column(children: [
               if (_existingMedia.isNotEmpty || _newMedia.isNotEmpty) ...[
@@ -353,7 +374,7 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
                       } else {
                         return GestureDetector(
                           onTap: _showMediaPickerSheet,
-                          child: Container(width: 80, height: 80, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: Colors.deepPurple.shade100, borderRadius: BorderRadius.circular(10)), child: const Center(child: Icon(Icons.add, color: Colors.white))),
+                          child: Container(width: 80, height: 80, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)), child: const Center(child: Icon(Icons.add, color: Colors.white))),
                         );
                       }
                     },
@@ -369,13 +390,13 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
                       Icon(
                         Icons.camera_alt_outlined,
                         size: 50,
-                        color: Colors.deepPurple.shade300,
+                        color: Colors.blue[800],
                       ),
                       const SizedBox(height: 10),
-                      const Text(
+                      Text(
                         "Unggah atau Pilih Foto/Video (maks 3)",
                         style: TextStyle(
-                          color: Colors.deepPurple,
+                          color: Colors.blue[800],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -388,17 +409,17 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
           ),
 
           const SizedBox(height: 40),
-          SizedBox(height: 55, width: double.infinity, child: ElevatedButton(onPressed: _submitUpdate, style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 2), child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))),
+          SizedBox(height: 55, width: double.infinity, child: ElevatedButton(onPressed: _submitUpdate, style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 2), child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)))),
         ]),
       ),
     );
   }
 
   Widget _buildLabel(String text) {
-    return Padding(padding: const EdgeInsets.only(bottom: 8.0, left: 4.0), child: Text(text, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 15)));
+    return Padding(padding: const EdgeInsets.only(bottom: 8.0, left: 4.0), child: Text(text, style: TextStyle(color: Colors.blue[800], fontWeight: FontWeight.bold, fontSize: 15)));
   }
 
   Widget _buildTextField({required TextEditingController controller, required String hint, required IconData icon, bool isLocation = false}) {
-    return Container(decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)), child: TextField(controller: controller, readOnly: isLocation, decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14), prefixIcon: Icon(icon, color: Colors.deepPurple, size: 22), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10))));
+    return Container(decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey),), child: TextField(controller: controller, readOnly: isLocation, decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14), prefixIcon: Icon(icon, color: Colors.blue[800], size: 22), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10))));
   }
 }
