@@ -43,14 +43,14 @@ class CustomTextField extends StatelessWidget {
         filled: true,
         fillColor: Colors.white,
         hintText: hintText,
-        prefixIcon: Icon(icon, color: Colors.deepPurple),
+        prefixIcon: Icon(icon, color: Colors.blue[800]),
         suffixIcon: isPassword && onToggleVisibility != null
             ? IconButton(
                 icon: Icon(
                   isVisible
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: Colors.deepPurple,
+                  color: Colors.blue[800],
                 ),
                 onPressed: onToggleVisibility,
               )
