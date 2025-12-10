@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jti_reports/core/widgets/loading_button.dart';
+import 'package:jti_reports/features/auth/services/auth_service.dart';
 
 class EmailVerificationPage extends StatefulWidget {
   const EmailVerificationPage({super.key});
@@ -12,6 +13,8 @@ class EmailVerificationPage extends StatefulWidget {
 
 class _EmailVerificationPageState extends State<EmailVerificationPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
+
   bool _isLoading = false;
   bool _isEmailSent = false;
   Timer? _timer;
@@ -29,7 +32,6 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
   }
 
   void _startVerificationCheck() {
-    // Check every 3 seconds if email is verified
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkEmailVerification();
     });
@@ -37,18 +39,18 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
 
   Future<void> _checkEmailVerification() async {
     try {
-      // Reload user to get latest email verification status
       await _auth.currentUser?.reload();
       final user = _auth.currentUser;
 
       if (user != null && user.emailVerified) {
+        await _authService.periksaDanUpdateVerifikasiEmail();
         _timer?.cancel();
-        if (mounted) {
+        if (!mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
       }
     } catch (e) {
-      // Ignore errors during verification check
+      debugPrint('Gagal cek verifikasi email: $e');
     }
   }
 

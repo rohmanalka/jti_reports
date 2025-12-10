@@ -3,15 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/appbar/main_app_bar.dart';
 import '../../../core/widgets/drawer/main_drawer.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'lokasi_page.dart'; // Pastikan file ini ada di folder pages
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TambahlaporanPage extends StatefulWidget {
-  const TambahlaporanPage({super.key, required void Function(int index) onTabChange});
+  const TambahlaporanPage({
+    super.key,
+    required void Function(int index) onTabChange,
+  });
 
   @override
   State<TambahlaporanPage> createState() => _TambahlaporanPageState();
@@ -22,10 +24,8 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
   final TextEditingController _jenisKerusakanController =
       TextEditingController();
   final TextEditingController _deskripsiController = TextEditingController();
-  final TextEditingController _lokasiDisplayController =
-      TextEditingController(); // Hanya untuk menampilkan teks lokasi
+  final TextEditingController _lokasiController = TextEditingController();
 
-  LokasiData? _selectedLocation;
   String? _selectedSeverity;
   final ImagePicker _picker = ImagePicker();
   final int _maxMedia = 3;
@@ -188,59 +188,71 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
   void dispose() {
     _jenisKerusakanController.dispose();
     _deskripsiController.dispose();
-    _lokasiDisplayController.dispose();
+    _lokasiController.dispose();
     super.dispose();
   }
 
-  // --- NAVIGASI KE PETA ---
-  void _openLocationPicker() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LokasiPage()),
-    );
-
-    if (result != null && result is LokasiData) {
-      setState(() {
-        _selectedLocation = result;
-        // Update text field agar user melihat lokasi yang dipilih
-        _lokasiDisplayController.text =
-            "${result.namaLokasi} (${result.patokan})";
-      });
-    }
-  }
-
   Future<void> uploadForm() async {
-    try {
-      // Simpan media ke folder lokal aplikasi
-      final appDir = await getApplicationDocumentsDirectory();
-      final mediaDir = Directory(p.join(appDir.path, 'laporan_media'));
-      if (!await mediaDir.exists()) {
-        await mediaDir.create(recursive: true);
-      }
+    // Validasi semua field harus terisi
+    if (_jenisKerusakanController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jenis kerusakan harus diisi')),
+      );
+      return;
+    }
 
-      List<String> mediaPaths = [];
+    if (_lokasiController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lokasi fasilitas harus diisi')),
+      );
+      return;
+    }
+
+    if (_deskripsiController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deskripsi kerusakan harus diisi')),
+      );
+      return;
+    }
+
+    if (_selectedSeverity == null || _selectedSeverity!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tingkat keparahan harus dipilih')),
+      );
+      return;
+    }
+    
+    try {
+      // Simpan media ke Supabase Storage
+      final supabase = Supabase.instance.client;
+      const String bucket = 'laporan-media';
+      List<String> mediaUrls = [];
+
+      // Upload setiap media ke Supabase storage dan ambil public URL
       for (var media in _media) {
-        final srcFile = File(media.path);
-        final filename = '${DateTime.now().millisecondsSinceEpoch}_${media.name}';
-        final destPath = p.join(mediaDir.path, filename);
-        final copied = await srcFile.copy(destPath);
-        mediaPaths.add(copied.path);
+        final file = File(media.path);
+        final filename =
+            '${DateTime.now().millisecondsSinceEpoch}_${p.basename(media.path)}';
+        final storagePath = 'reports/$filename';
+
+        final bytes = await file.readAsBytes();
+
+        await supabase.storage.from(bucket).uploadBinary(storagePath, bytes);
+
+        // dapatkan public URL
+        final publicUrl = supabase.storage
+            .from(bucket)
+            .getPublicUrl(storagePath);
+        mediaUrls.add(publicUrl);
       }
 
       // Simpan data laporan ke Firestore
       await FirebaseFirestore.instance.collection('reports').add({
         'jenis_kerusakan': _jenisKerusakanController.text,
         'deskripsi': _deskripsiController.text,
-        'lokasi': _selectedLocation != null
-            ? {
-                'nama_lokasi': _selectedLocation!.namaLokasi,
-                'patokan': _selectedLocation!.patokan,
-                'latitude': _selectedLocation!.latitude,
-                'longitude': _selectedLocation!.longitude,
-              }
-            : null,
+        'lokasi': _lokasiController.text,
         'tingkat_keparahan': _selectedSeverity,
-        'media_paths': mediaPaths,
+        'media_paths': mediaUrls,
         'status': 'Diajukan',
         'user_id': FirebaseAuth.instance.currentUser!.uid,
         'timestamp': FieldValue.serverTimestamp(),
@@ -289,17 +301,10 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
 
             // 2. Lokasi Fasilitas (Read Only - Tap to Pick)
             _buildLabel("Lokasi Fasilitas"),
-            GestureDetector(
-              onTap: _openLocationPicker,
-              child: AbsorbPointer(
-                // Mencegah keyboard muncul
-                child: _buildTextField(
-                  controller: _lokasiDisplayController,
-                  hint: "Pilih lokasi fasilitas...",
-                  icon: Icons.location_on,
-                  isLocation: true,
-                ),
-              ),
+            _buildTextField(
+              controller: _lokasiController,
+              hint: "Contoh: LPR1-LT7B",
+              icon: Icons.location_on,
             ),
             const SizedBox(height: 15),
 
@@ -317,7 +322,7 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.grey[100],                
+                color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey),
               ),
@@ -339,10 +344,7 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                       ),
                     ],
                   ),
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.blue[800],
-                  ),
+                  icon: Icon(Icons.arrow_drop_down, color: Colors.blue[800]),
                   items: _severityOptions.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -445,10 +447,9 @@ class _TambahlaporanPageState extends State<TambahlaporanPage> {
                   await uploadForm();
                   setState(() {
                     _jenisKerusakanController.clear();
-                    _lokasiDisplayController.clear();
+                    _lokasiController.clear();
                     _deskripsiController.clear();
                     _selectedSeverity = null;
-                    _selectedLocation = null;
                     _media.clear();
                   });
                 },

@@ -167,15 +167,19 @@ class AuthService {
       if (userDoc.exists) {
         userModel = UserModel.fromMap(user.uid, userDoc.data()!);
 
-        // Update data jika diperlukan
         final updates = <String, dynamic>{};
+
         if (user.photoURL != userModel.photoURL) {
           updates['photoURL'] = user.photoURL;
         }
-        // Pastikan emailVerified true untuk Google Sign In
+
         if (!userModel.emailVerified) {
           updates['emailVerified'] = true;
           updates['emailVerifiedAt'] = Timestamp.now();
+        } else {
+          if (userModel.emailVerifiedAt == null) {
+            updates['emailVerifiedAt'] = Timestamp.now();
+          }
         }
 
         if (updates.isNotEmpty) {
@@ -183,16 +187,18 @@ class AuthService {
           userModel = userModel.copyWith(
             photoURL: user.photoURL,
             emailVerified: true,
+            emailVerifiedAt:
+                updates['emailVerifiedAt'] ?? userModel.emailVerifiedAt,
           );
         }
       } else {
-        // User baru dengan Google - email sudah terverifikasi
         userModel = UserModel(
           uid: user.uid,
           name: user.displayName ?? googleUser.displayName ?? 'User',
           email: user.email ?? googleUser.email,
           role: AppConstants.defaultUserRole,
-          emailVerified: true, // Google Sign In otomatis terverifikasi
+          emailVerified: true,
+          emailVerifiedAt: Timestamp.now(),
           createdAt: Timestamp.now(),
           photoURL: user.photoURL ?? googleUser.photoUrl,
           provider: 'google',

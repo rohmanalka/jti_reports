@@ -6,6 +6,7 @@ import 'package:jti_reports/core/widgets/custom_text_field.dart';
 import 'package:jti_reports/core/widgets/loading_button.dart';
 import 'package:jti_reports/features/auth/services/auth_service.dart';
 import 'package:jti_reports/features/auth/pages/forgot_password_page.dart';
+import 'package:jti_reports/features/home/pages/admin_page.dart';
 import '../../../main.dart';
 import 'register_page.dart';
 
@@ -114,10 +115,19 @@ class _LoginPageState extends State<LoginPage>
 
         _tampilkanSnackbar("Login berhasil!", Colors.green);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainPage()),
-        );
+        if (userModel.role == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminHomePage(onTabChange: (int index) {}),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainPage()),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -144,10 +154,19 @@ class _LoginPageState extends State<LoginPage>
       if (userModel != null) {
         _tampilkanSnackbar("Login dengan Google berhasil!", Colors.green);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainPage()),
-        );
+        if (userModel.role == AppConstants.adminRole) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminHomePage(onTabChange: (int index) {}),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainPage()),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -200,25 +219,11 @@ class _LoginPageState extends State<LoginPage>
       opacity: _animasiFade,
       child: ScaleTransition(
         scale: _animasiScale,
-        child: Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Colors.deepPurple, Colors.purpleAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.deepPurple.withAlpha(76),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.lock_outline, size: 50, color: Colors.white),
+        child: Image.asset(
+          'lib/images/logo.png',
+          width: 180,
+          height: 180,
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -298,7 +303,7 @@ class _LoginPageState extends State<LoginPage>
             child: Text(
               'Lupa Password?',
               style: TextStyle(
-                color: Colors.deepPurple,
+                color: Colors.blue[800],
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -318,7 +323,7 @@ class _LoginPageState extends State<LoginPage>
           isLoading: _isLoading,
           text: 'Masuk',
           onPressed: _prosesLogin,
-          backgroundColor: Colors.deepPurple,
+          backgroundColor: Colors.blue[800]!,
           textColor: Colors.white,
         ),
       ),
@@ -387,7 +392,7 @@ class _LoginPageState extends State<LoginPage>
               child: Text(
                 'Daftar',
                 style: TextStyle(
-                  color: Colors.deepPurple,
+                  color: Colors.blue[800],
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -414,9 +419,9 @@ class _LoginPageState extends State<LoginPage>
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       children: [
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
                         _buildHeader(),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
                         _buildJudul(),
                         const SizedBox(height: 30),
                         _buildFormLogin(),
