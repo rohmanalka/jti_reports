@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../notifications/notifications_modal.dart';
+import '../notifications/user_notifications_modal.dart';
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
