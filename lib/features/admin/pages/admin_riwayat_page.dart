@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jti_reports/core/widgets/appbar/main_app_bar.dart';
-import 'package:jti_reports/core/widgets/drawer/main_drawer.dart';
+import 'package:jti_reports/core/widgets/appbar/main_app_bar_admin.dart';
 import 'package:jti_reports/features/admin/widgets/admin_reports_list.dart';
 
 class AdminRiwayatPage extends StatelessWidget {
@@ -11,8 +10,7 @@ class AdminRiwayatPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const MainDrawer(),
-      appBar: const MainAppBar(title: 'Riwayat Laporan (Admin)'),
+      appBar: const MainAppBarAdmin(title: 'Riwayat Laporan (Admin)'),
       backgroundColor: Colors.indigo[50],
       body: Padding(
         padding: const EdgeInsets.all(16),
