@@ -300,6 +300,7 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
         'media_paths': finalMediaUrls,
         'status': 'Diajukan',
         'updated_at': FieldValue.serverTimestamp(),
+        'is_read': true,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan berhasil diperbarui')));
@@ -355,7 +356,7 @@ class _UpdateLaporanPageState extends State<UpdateLaporanPage> {
 
           const SizedBox(height: 15),
           _buildLabel('Lokasi Fasilitas'),
-          _buildTextField(controller: _lokasiController, hint: 'Contoh: LPR1-LT7B', icon: Icons.location_on, isLocation: true),
+          _buildTextField(controller: _lokasiController, hint: 'Contoh: LPR1-LT7B', icon: Icons.location_on),
 
           const SizedBox(height: 15),
           _buildLabel('Deskripsi Kerusakan'),
