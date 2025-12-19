@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jti_reports/features/admin/pages/admin_bukti_proses_page.dart';
 import 'package:jti_reports/features/riwayat/pages/detail_laporan_page.dart';
 
 /// =======================
@@ -204,16 +205,6 @@ class _AdminReportsListState extends State<AdminReportsList> {
     }
   }
 
-  Future<void> _updateStatus(String docId, String newStatus) async {
-    if (_getStatusOptions().contains(newStatus)) {
-      await FirebaseFirestore.instance.collection('reports').doc(docId).update({
-        'status': newStatus,
-        'updated_at': FieldValue.serverTimestamp(),
-        'is_read': false,
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final stream = FirebaseFirestore.instance.collection('reports').snapshots();
@@ -317,12 +308,14 @@ class _AdminReportsListState extends State<AdminReportsList> {
                         statusItems: _getStatusOptions(),
                         onStatusChanged: (newStatus) async {
                           try {
-                            await _updateStatus(doc.id, newStatus);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Status diubah: $newStatus'),
-                              ),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AdminBuktiProsesPage(
+                                  docId: doc.id,
+                                  newStatus: newStatus,
+                                ),
+                              )
                             );
                           } catch (e) {
                             if (!mounted) return;

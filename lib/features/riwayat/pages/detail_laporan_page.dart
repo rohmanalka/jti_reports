@@ -16,6 +16,7 @@ class DetailLaporanPage extends StatefulWidget {
   final String lokasi;
   final List<String>? mediaPaths;
   final String docId;
+  final List<String>? buktiPaths;
 
   const DetailLaporanPage({
     super.key,
@@ -28,6 +29,7 @@ class DetailLaporanPage extends StatefulWidget {
     required this.lokasi,
     this.mediaPaths,
     required this.docId,
+    this.buktiPaths,
   });
 
   @override
@@ -79,6 +81,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     final lokasi = widget.lokasi;
     final mediaPaths = widget.mediaPaths;
     final docId = widget.docId;
+    final buktiPaths = widget.buktiPaths;
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
@@ -186,21 +189,21 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             Container(
               height: 220,
               decoration: BoxDecoration(
-                color: Colors.deepPurple.shade50,
+                color: Colors.grey[50],
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  "Gambar Pendukung",
+                  "Tidak Ada Gambar Pendukung",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.deepPurple,
+                    color: Colors.blue[800],
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-
+  
           const SizedBox(height: 20),
 
           _buildInfo("Judul Laporan", title),
@@ -211,61 +214,116 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
           _buildInfo("Lokasi", lokasi),
           const SizedBox(height: 20),
 
-          if (status == 'Diajukan' && _userRole != 'admin')
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: docId == null
-                      ? null
-                      : () async {
-                          final updated = await Navigator.push<bool?>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => UpdateLaporanPage(
-                                docId: widget.docId,
-                                initialJenis: title,
-                                initialDeskripsi: deskripsi,
-                                initialLokasi: lokasi,
-                                initialSeverity: keparahan,
-                                initialMediaPaths: mediaPaths,
-                              ),
-                            ),
-                          );
-                          if (updated == true) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  label: const Text(
-                    'Update',
-                    style: TextStyle(color: Colors.blue),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.blue),
+          if (buktiPaths != null && buktiPaths.isNotEmpty) 
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Bukti Proses",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 220,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: buktiPaths.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, i) {
+                      final path = buktiPaths[i];
+                      final isNetwork = path.startsWith('http') || path.startsWith('https');
+                      Widget thumb;
 
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: docId == null
-                      ? null
-                      : () => _confirmDelete(context),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text(
-                    'Delete',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
+                      if (isNetwork) {
+                        thumb = Image.network(path, fit: BoxFit.cover);
+                      } else {
+                        final f = File(path);
+                        if (!f.existsSync()) {
+                          thumb = const Center(child: Icon(Icons.broken_image, size: 36));
+                        } else {
+                          thumb = Image.file(f, fit: BoxFit.cover);
+                        }
+                      }
+
+                      return GestureDetector(
+                        onTap: () => _openMedia(context, path, false), // False for images
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 180,
+                            height: 220,
+                            color: Colors.grey[50],
+                            child: thumb,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+
+          const SizedBox(height: 20),
+
+          if (status == 'Diajukan' && _userRole != 'admin')
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: docId == null
+                        ? null
+                        : () async {
+                            final updated = await Navigator.push<bool?>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => UpdateLaporanPage(
+                                  docId: widget.docId,
+                                  initialJenis: title,
+                                  initialDeskripsi: deskripsi,
+                                  initialLokasi: lokasi,
+                                  initialSeverity: keparahan,
+                                  initialMediaPaths: mediaPaths,
+                                ),
+                              ),
+                            );
+                            if (updated == true) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    label: const Text(
+                      'Update',
+                      style: TextStyle(color: Colors.blue),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.blue),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: docId == null
+                        ? null
+                        : () => _confirmDelete(context),
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    label: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
